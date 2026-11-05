@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coral Island Tour Cost Summary Report</title>
+<style>
+:root{
+  --brand:#C98B15;--brand-dark:#a6710f;--bg:#f4f6f9;--card-bg:#fff;--text:#1e293b;
+  --muted:#64748b;--border:#e2e8f0;--danger:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);padding:2rem 1rem;line-height:1.5}
+.container{max-width:1300px;margin:0 auto}
+.header{text-align:center;margin-bottom:1.5rem}
+.header h1{font-size:1.8rem;color:var(--brand-dark);margin-bottom:.25rem;font-weight:700}
+.header p{color:var(--muted);font-size:.95rem}
+.card{background:var(--card-bg);border-radius:12px;padding:1.5rem;box-shadow:0 4px 15px rgba(0,0,0,.05);margin-bottom:1.5rem;border:1px solid var(--border)}
+.card-title{font-size:1.05rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:.75rem}
+textarea{width:100%;height:170px;padding:.75rem 1rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;border:1.5px solid var(--border);border-radius:8px;outline:none;resize:vertical}
+textarea:focus{border-color:var(--brand)}
+.btn-group{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.55rem 1.1rem;font-size:.88rem;font-weight:600;font-family:inherit;border:none;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--brand);color:#fff}.btn-primary:hover{background:var(--brand-dark)}
+.btn-secondary{background:#3b82f6;color:#fff}.btn-secondary:hover{background:#2563eb}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text)}.btn-outline:hover{background:#f8fafc;border-color:var(--muted)}
+.btn-danger{background:#fee2e2;color:var(--danger)}.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:.25rem .5rem;font-size:.8rem;border-radius:4px}
+.spacer{margin-left:auto}
+.toggle-box{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;background:#f8fafc;padding:.85rem 1rem;border-radius:8px;border:1px solid var(--border);font-size:.88rem;align-items:center}
+.toggle-box label{display:flex;align-items:center;gap:.4rem;cursor:pointer;font-weight:500;user-select:none}
+.toggle-box input[type=checkbox]{accent-color:var(--brand);width:16px;height:16px;cursor:pointer}
+.tip-box{font-size:.85rem;color:var(--muted);background:#fffbe0;border-left:4px solid var(--brand);padding:.75rem 1rem;border-radius:4px}
+.status{font-size:.85rem;min-height:1.3em}
+.status.ok{color:#047857}.status.warn{color:#b45309}.status.err{color:#b91c1c}
+.status ul{margin:.25rem 0 0 1.2rem}
+.table-responsive{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.88rem;background:#fff;text-align:center;min-width:900px}
+thead tr{background:var(--brand);color:#fff;font-weight:600}
+th,td{padding:.6rem .5rem;border:1px solid var(--border);vertical-align:middle}
+tbody tr:nth-child(even){background:#f8fafc}
+tbody tr:hover{background:#f1f5f9}
+tfoot tr{background:#f1f5f9;font-weight:700}
+table input{width:100%;padding:.35rem .4rem;font-family:inherit;font-size:.88rem;border:1px solid var(--border);border-radius:4px;text-align:center;outline:none;background:#fff}
+table input:focus{border-color:var(--brand);background:#fffdf6}
+.num-pos{color:#047857;font-weight:600}.num-neg{color:#b91c1c;font-weight:600}
+.left{text-align:left!important}
+.empty{padding:1.5rem;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600}
+.rates{margin-top:.75rem;max-width:620px}
+.rates table{min-width:0}
+.print-meta{display:none}
+/* column hiding (class on table) */
+table.hide-c0 .c0,table.hide-c1 .c1,table.hide-c2 .c2,table.hide-c3 .c3,
+table.hide-c4 .c4,table.hide-c5 .c5,table.hide-c6 .c6,table.hide-c7 .c7{display:none}
+@media print{
+  body{padding:0;background:#fff}
+  .no-print{display:none!important}
+  .card{box-shadow:none;border:none;padding:0;margin:0}
+  .container{max-width:100%}
+  .print-meta{display:block;text-align:center;font-size:9pt;color:#444;margin-bottom:6px}
+  table{font-size:9pt;min-width:0}
+  th,td{padding:5px 3px;border:1px solid #94a3b8}
+  table input{border:none;background:transparent;padding:0}
+  input[type=date]::-webkit-calendar-picker-indicator{display:none}
+  thead{display:table-header-group}tr{page-break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Coral Island Tour Cost Summary Report</h1>
+    <p>Record, analyze, and export client &amp; supplier billing summaries</p>
+  </div>
+
+  <div class="card no-print">
+    <div class="card-title"><span>📝 Input &amp; Add Tour Data</span><span id="saveState" class="status"></span></div>
+    <div class="tip-box">
+      <b>How to use:</b><br>
+      • <b>Paste a note</b> (one or many groups — separate groups with a line <code>---</code>) and click <b>Analyze Note &amp; Add</b>. Quantities, activity types, boat/lunch cost and the date are read from the note.<br>
+      • <b>Manual entry:</b> click <b>Add Empty Row</b> and type in the table. Profit is always calculated = Sales − Net Cost.<br>
+      • <b>Your data is saved automatically</b> in this browser. Use <b>Backup / Restore</b> to keep a copy or move to another computer.<br>
+      • <b>External report:</b> use the preset below to hide cost/profit columns before printing for clients.
+    </div>
+    <div class="stack" style="margin-top:.75rem">
+      <textarea id="rawText" placeholder="Paste tour note here, e.g.:
+Mr. Anuruddha
+11 + 5 child
+Coral + Lunch
+24 Oct 2026
+
+Activity
+1*800 full =+800
+4*300 p/s =+1200
+2*100 j/s =+200
+
+11*300 Boat+lunch =-3300
+5*100 Boat +lunch =-500"></textarea>
+      <div id="parseMsg" class="status" role="status"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btnParse">⚡ Analyze Note &amp; Add</button>
+        <button class="btn btn-secondary" id="btnAdd">➕ Add Empty Row</button>
+        <button class="btn btn-outline" id="btnSample">🔄 Load Sample (10 Groups)</button>
+        <button class="btn btn-outline spacer" id="btnPrint">🖨 Save as PDF / Print Report</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <div class="card-title">
+      <span>👁️ Show / Hide Columns &amp; Filter</span>
+      <span style="font-size:.8rem;font-weight:400;color:var(--muted)">Hidden columns are also hidden in the printed PDF</span>
+    </div>
+    <div class="toggle-box" id="colToggles"></div>
+    <div class="btn-group" style="margin-top:.75rem">
+      <button class="btn btn-outline" id="btnExternal">🔒 External report preset</button>
+      <button class="btn btn-outline" id="btnAllCols">Show all columns</button>
+      <label style="font-size:.88rem;font-weight:500">Month:
+        <select id="monthFilter" style="padding:.35rem;border:1.5px solid var(--border);border-radius:6px;font-family:inherit"></select>
+      </label>
+      <button class="btn btn-outline" id="btnSort">Sort by date</button>
+      <button class="btn btn-outline spacer" id="btnCsv">⬇ Export CSV</button>
+      <button class="btn btn-outline" id="btnBackup">💾 Backup (JSON)</button>
+      <button class="btn btn-outline" id="btnRestore">📂 Restore</button>
+      <input type="file" id="fileRestore" accept="application/json,.json" style="display:none">
+      <button class="btn btn-danger" id="btnClear">Clear all</button>
+    </div>
+    <details style="margin-top:1rem">
+      <summary>⚙️ Activity rate table (used by the note analyzer)</summary>
+      <div class="rates"><div class="table-responsive"><table id="rateTable"></table></div></div>
+      <p class="status" style="color:var(--muted);margin-top:.4rem">Profit per unit = Sales − Net Cost. Edit if prices change; saved automatically.</p>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="print-meta" id="printMeta"></div>
+    <div class="table-responsive">
+      <table id="tourTable">
+        <thead><tr>
+          <th class="c0" style="width:11%">Date</th>
+          <th class="c1" style="width:19%">Customer Name</th>
+          <th class="c2" style="width:10%">Pax</th>
+          <th class="c3">Activity Sales</th>
+          <th class="c4">Activity Net Cost</th>
+          <th class="c5">Activity Profit (+)</th>
+          <th class="c6">Boat &amp; Lunch Cost (−)</th>
+          <th class="c7">Net Balance</th>
+          <th class="no-print" style="width:6%">Action</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot><tr id="footRow">
+          <td id="footLabel" colspan="2" style="text-align:right">Grand Total:</td>
+          <td class="c2" id="totPax">0</td>
+          <td class="c3" id="totSales">0</td>
+          <td class="c4" id="totNet">0</td>
+          <td class="c5" id="totProfit">0</td>
+          <td class="c6" id="totBoat">0</td>
+          <td class="c7" id="totBal">0</td>
+          <td class="no-print"></td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div id="emptyMsg" class="empty" style="display:none">No data yet — paste a note or add a row.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "coralIslandTourSummary.v2";
+  var COLS = ["Date","Customer Name","Pax","Activity Sales","Activity Net Cost","Activity Profit (+)","Boat & Lunch Cost (−)","Net Balance"];
+  var DEFAULT_RATES = {
+    full: { label: "Full package", sales: 2400, net: 1600 },
+    ps:   { label: "Parasailing (p/s)", sales: 750, net: 450 },
+    js:   { label: "Jet ski (j/s)", sales: 500, net: 400 },
+    sw:   { label: "Sea walk (s/w)", sales: 1700, net: 1000 }
+  };
+  var SAMPLE = [
+    ["2026-10-08","Mr. Ayesha Perera","10 + 1 Inf",3150,2050,-3000],
+    ["2026-10-09","Mr. Nalinda","2",500,400,-600],
+    ["2026-10-10","Mrs. Srimali Pathumika","3",1250,850,-900],
+    ["2026-10-14","Mr. Thilina","2",500,400,-600],
+    ["2026-10-23","Mr. Sudith Shamika","5",750,450,-1500],
+    ["2026-10-24","Mrs. Sandali Dilrukshi","2",750,450,-600],
+    ["2026-10-24","Mr. Anuruddha","11 + 5 ch",6400,4200,-3800],
+    ["2026-10-24","Mr. Samantha","4",0,2900,-1200],
+    ["2026-10-27","Mr. Shamika Gamage","2",0,0,-600],
+    ["2026-10-29","Mr. Deemantha Nadeesh","4 + 1 ch + 1 Inf",2250,1650,-1300]
+  ];
+  var MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12,
+    january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+
+  var state = { rows: [], rates: clone(DEFAULT_RATES), hidden: [], month: "all", nextId: 1 };
+  var saveTimer = null;
+
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function $(id){ return document.getElementById(id); }
+  function num(v){ var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function fmt(n){ return Number(n).toLocaleString("en-US"); }
+  function pad(n){ return (n < 10 ? "0" : "") + n; }
+  function todayISO(){ var d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function isoOk(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s || ""); }
+  function profitOf(r){ return num(r.sales) - num(r.net); }
+  function balOf(r){ return profitOf(r) + num(r.boat); }
+  function paxTotal(s){ var m = String(s || "").match(/\d+/g); return m ? m.reduce(function(a,b){return a + parseInt(b,10);},0) : 0; }
+
+  /* ---------- storage ---------- */
+  function setSaveState(text, cls){ var el = $("saveState"); el.textContent = text; el.className = "status " + (cls || "ok"); }
+  function saveNow(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); setSaveState("✓ Saved " + new Date().toLocaleTimeString(), "ok"); }
+    catch (e) { setSaveState("⚠ Cannot save in this browser — use Backup (JSON)", "err"); }
+  }
+  function scheduleSave(){ setSaveState("Saving…", "warn"); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 400); }
+  function sanitize(obj){
+    var s = { rows: [], rates: clone(DEFAULT_RATES), hidden: [], month: "all", nextId: 1 };
+    if (!obj || typeof obj !== "object") return s;
+    (Array.isArray(obj.rows) ? obj.rows : []).forEach(function(r){
+      if (!r || typeof r !== "object") return;
+      s.rows.push({ id: s.nextId++, date: isoOk(r.date) ? r.date : "", customer: String(r.customer || "").slice(0,200),
+        pax: String(r.pax || "").slice(0,60), sales: num(r.sales), net: num(r.net), boat: -Math.abs(num(r.boat)) });
+    });
+    if (obj.rates && typeof obj.rates === "object") Object.keys(DEFAULT_RATES).forEach(function(k){
+      var r = obj.rates[k]; if (r && isFinite(+r.sales) && isFinite(+r.net)) s.rates[k] = { label: DEFAULT_RATES[k].label, sales: +r.sales, net: +r.net };
+    });
+    if (Array.isArray(obj.hidden)) s.hidden = obj.hidden.filter(function(i){ return Number.isInteger(i) && i >= 0 && i < 8; });
+    if (typeof obj.month === "string") s.month = obj.month;
+    return s;
+  }
+  function load(){
+    try { var raw = localStorage.getItem(KEY); if (raw) state = sanitize(JSON.parse(raw)); } catch (e) { setSaveState("⚠ Saved data could not be read", "err"); }
+  }
+
+  /* ---------- note parser (pure; returns {rows, warnings}) ---------- */
+  function parseDate(text){
+    var m = text.match(/(\d{1,2})[\/\-.\s]+([A-Za-z]{3,9}|\d{1,2})[\/\-.\s]+(\d{4})/);
+    if (!m) return null;
+    var d = parseInt(m[1],10), mo = /^\d+$/.test(m[2]) ? parseInt(m[2],10) : MONTHS[m[2].toLowerCase()], y = parseInt(m[3],10);
+    if (!mo || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return y + "-" + pad(mo) + "-" + pad(d);
+  }
+  function activityKey(lower){
+    if (/\bfull\b/.test(lower)) return "full";
+    if (/p\/s|parasail/.test(lower)) return "ps";
+    if (/j\/s|jet\s?ski/.test(lower)) return "js";
+    if (/s\/w|sea\s?walk/.test(lower)) return "sw";
+    return null;
+  }
+  function parseNote(text, rates){
+    var warnings = [], lines = text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
+    var isBoat = function(l){ return /boat|lunch/i.test(l) && /\d/.test(l); };
+    var customer = "", pax = "";
+    for (var i = 0; i < lines.length; i++) {
+      if (/^(mr|mrs|ms|miss|dr)\b\.?/i.test(lines[i])) { customer = lines[i]; break; }
+    }
+    if (!customer) for (i = 0; i < lines.length; i++) {
+      if (!/\d/.test(lines[i]) && !/coral|activity|lunch|boat/i.test(lines[i])) { customer = lines[i]; break; }
+    }
+    if (!customer) { customer = lines[0] || ""; warnings.push("Customer name not recognised — used the first line."); }
+    for (i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (l === customer || /[*=]/.test(l) || parseDate(l)) continue;
+      if (/\d/.test(l) && (/\+/.test(l) || /\b(pax|adults?|child(ren)?|ch|inf(ants?)?)\b/i.test(l) || /^\d+$/.test(l))) { pax = l.replace(/\bfrom\b.*/i, "").trim(); break; }
+    }
+    if (!pax) warnings.push("Pax not found.");
+    var date = parseDate(lines.join("\n"));
+    if (!date) { date = todayISO(); warnings.push("Date not found — used today's date."); }
+    var sales = 0, net = 0, boat = 0, acts = 0, boats = 0;
+    lines.forEach(function(l){
+      var lower = l.toLowerCase();
+      if (isBoat(l)) {
+        var d = l.match(/=\s*-?\s*(\d+)/), qr = l.match(/(\d+)\s*[*x×]\s*(\d+)/);
+        if (d) boat -= parseInt(d[1],10);
+        else if (qr) boat -= parseInt(qr[1],10) * parseInt(qr[2],10);
+        else { warnings.push('Boat/lunch line has no amount: "' + l + '"'); return; }
+        boats++; return;
+      }
+      var key = activityKey(lower);
+      if (!key) { if (/\d+\s*[*x×]\s*\d+/.test(l)) warnings.push('Unknown activity — line skipped: "' + l + '"'); return; }
+      var q = (l.match(/(\d+)\s*[*x×]\s*\d+/) || [0,1])[1]; q = parseInt(q,10);
+      var rate = rates[key], decl = l.match(/=\s*\+\s*(\d+)/), inc = /\binc(l|luded)?\b/.test(lower);
+      acts++;
+      if (inc) { net += q * rate.net; return; }
+      var s = q * rate.sales, n = q * rate.net;
+      if (decl) {
+        var dp = parseInt(decl[1],10), ep = s - n;
+        if (dp !== ep) { warnings.push('"' + l + '": note says profit +' + fmt(dp) + ' but rate table gives +' + fmt(ep) + ' — kept the note\'s figure (check rates).'); n = s - dp; }
+      }
+      sales += s; net += n;
+    });
+    if (!acts && !boats) warnings.push("No activity or boat/lunch lines found.");
+    return { row: { date: date, customer: customer, pax: pax, sales: sales, net: net, boat: boat }, warnings: warnings };
+  }
+
+  /* ---------- rendering ---------- */
+  function mk(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function cell(cls, child){ var td = mk("td", cls); td.appendChild(child); return td; }
+  function inputEl(type, value, onInput, opts){
+    var i = document.createElement("input"); i.type = type; i.value = value; opts = opts || {};
+    if (opts.placeholder) i.placeholder = opts.placeholder;
+    if (opts.cls) i.className = opts.cls;
+    if (opts.left) i.classList.add("left");
+    if (type === "number") i.step = "any";
+    i.addEventListener("input", onInput);
+    if (opts.onChange) i.addEventListener("change", opts.onChange);
+    return i;
+  }
+  function visibleRows(){
+    return state.rows.filter(function(r){ return state.month === "all" || (r.date || "").slice(0,7) === state.month; });
+  }
+  function renderTable(){
+    var tb = $("tableBody"); tb.innerHTML = "";
+    var rows = visibleRows();
+    rows.forEach(function(r){
+      var tr = mk("tr"), cProfit = mk("td","c5"), cBal = mk("td","c7");
+      function upd(noSave){
+        var p = profitOf(r), b = balOf(r);
+        cProfit.textContent = fmt(p); cProfit.className = "c5 " + (p >= 0 ? "num-pos" : "num-neg");
+        cBal.textContent = fmt(b); cBal.className = "c7 " + (b >= 0 ? "num-pos" : "num-neg");
+        if (noSave !== true) { renderTotals(); scheduleSave(); }
+      }
+      tr.appendChild(cell("c0", inputEl("date", r.date, function(e){ r.date = e.target.value; scheduleSave(); }, { onChange: function(){ refreshMonths(); } })));
+      tr.appendChild(cell("c1", inputEl("text", r.customer, function(e){ r.customer = e.target.value; scheduleSave(); }, { left: true, placeholder: "Customer Name" })));
+      tr.appendChild(cell("c2", inputEl("text", r.pax, function(e){ r.pax = e.target.value; renderTotals(); scheduleSave(); }, { placeholder: "e.g. 4 or 11 + 5 ch" })));
+      tr.appendChild(cell("c3", inputEl("number", r.sales, function(e){ r.sales = num(e.target.value); upd(); })));
+      tr.appendChild(cell("c4", inputEl("number", r.net, function(e){ r.net = num(e.target.value); upd(); })));
+      tr.appendChild(cProfit);
+      tr.appendChild(cell("c6", inputEl("number", r.boat, function(e){ r.boat = num(e.target.value); upd(); }, { cls: "num-neg",
+        onChange: function(e){ r.boat = -Math.abs(num(e.target.value)); e.target.value = r.boat; upd(); } })));
+      tr.appendChild(cBal);
+      var del = mk("button","btn btn-danger btn-sm","Delete");
+      del.addEventListener("click", function(){
+        if (!confirm('Delete "' + (r.customer || "this row") + '"?')) return;
+        state.rows = state.rows.filter(function(x){ return x.id !== r.id; });
+        refreshMonths(); renderTable(); scheduleSave();
+      });
+      var tdA = mk("td","no-print"); tdA.appendChild(del); tr.appendChild(tdA);
+      tb.appendChild(tr);
+      upd(true);
+    });
+    $("emptyMsg").style.display = rows.length ? "none" : "block";
+    renderTotals();
+  }
+  function renderTotals(){
+    var t = { pax:0, sales:0, net:0, profit:0, boat:0, bal:0 };
+    visibleRows().forEach(function(r){
+      t.pax += paxTotal(r.pax); t.sales += num(r.sales); t.net += num(r.net);
+      t.profit += profitOf(r); t.boat += num(r.boat); t.bal += balOf(r);
+    });
+    $("totPax").textContent = fmt(t.pax); $("totSales").textContent = fmt(t.sales); $("totNet").textContent = fmt(t.net);
+    $("totProfit").textContent = fmt(t.profit); $("totProfit").className = "c5 " + (t.profit >= 0 ? "num-pos" : "num-neg");
+    $("totBoat").textContent = fmt(t.boat); $("totBoat").className = "c6 num-neg";
+    $("totBal").textContent = fmt(t.bal); $("totBal").className = "c7 " + (t.bal >= 0 ? "num-pos" : "num-neg");
+    var label = $("printMeta"), mo = state.month === "all" ? "All dates" : state.month;
+    label.textContent = "Coral Island Tour Cost Summary — " + mo + " — " + visibleRows().length + " group(s)";
+  }
+  function applyColumns(){
+    var t = $("tourTable");
+    for (var i = 0; i < 8; i++) t.classList.toggle("hide-c" + i, state.hidden.indexOf(i) >= 0);
+    var vis = [0,1].filter(function(i){ return state.hidden.indexOf(i) < 0; }).length;
+    var lab = $("footLabel"); lab.style.display = vis ? "" : "none"; lab.colSpan = vis || 1;
+    document.querySelectorAll("#colToggles input").forEach(function(c){ c.checked = state.hidden.indexOf(+c.dataset.col) < 0; });
+  }
+  function buildToggles(){
+    var box = $("colToggles");
+    COLS.forEach(function(name, i){
+      var lb = mk("label"), cb = document.createElement("input");
+      cb.type = "checkbox"; cb.dataset.col = i; cb.checked = true;
+      cb.addEventListener("change", function(){
+        state.hidden = state.hidden.filter(function(x){ return x !== i; });
+        if (!cb.checked) state.hidden.push(i);
+        applyColumns(); scheduleSave();
+      });
+      lb.appendChild(cb); lb.appendChild(document.createTextNode(" " + name)); box.appendChild(lb);
+    });
+  }
+  function refreshMonths(){
+    var sel = $("monthFilter"), set = {};
+    state.rows.forEach(function(r){ if (isoOk(r.date)) set[r.date.slice(0,7)] = 1; });
+    var months = Object.keys(set).sort();
+    if (state.month !== "all" && months.indexOf(state.month) < 0) state.month = "all";
+    sel.innerHTML = "";
+    [["all","All months"]].concat(months.map(function(m){ return [m, m]; })).forEach(function(o){
+      var op = mk("option", "", o[1]); op.value = o[0]; sel.appendChild(op);
+    });
+    sel.value = state.month;
+  }
+  function renderRates(){
+    var t = $("rateTable"); t.innerHTML = "";
+    var head = mk("tr"); ["Activity","Sales","Net cost","Profit / unit"].forEach(function(h){ head.appendChild(mk("th","",h)); });
+    var th = mk("thead"); th.style.background = "var(--brand)"; th.style.color = "#fff"; th.appendChild(head); t.appendChild(th);
+    var tb = mk("tbody");
+    Object.keys(state.rates).forEach(function(k){
+      var r = state.rates[k], tr = mk("tr"), pc = mk("td","num-pos");
+      var show = function(){ pc.textContent = fmt(r.sales - r.net); };
+      tr.appendChild(mk("td","left",r.label));
+      tr.appendChild(cell("", inputEl("number", r.sales, function(e){ r.sales = num(e.target.value); show(); scheduleSave(); })));
+      tr.appendChild(cell("", inputEl("number", r.net, function(e){ r.net = num(e.target.value); show(); scheduleSave(); })));
+      show(); tr.appendChild(pc); tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+  }
+  function fullRender(){ refreshMonths(); renderTable(); applyColumns(); }
+
+  /* ---------- actions ---------- */
+  function addRow(d){
+    state.rows.push({ id: state.nextId++, date: d.date || "", customer: d.customer || "", pax: d.pax || "",
+      sales: num(d.sales), net: num(d.net), boat: -Math.abs(num(d.boat)) });
+  }
+  function showMsg(cls, html){ var el = $("parseMsg"); el.className = "status " + cls; el.innerHTML = html; }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function onParse(){
+    var text = $("rawText").value.trim();
+    if (!text) { showMsg("err", "Please paste the tour note first."); return; }
+    var chunks = text.split(/^\s*(?:-{3,}|={3,})\s*$/m).map(function(c){ return c.trim(); }).filter(Boolean);
+    var names = [], warns = [];
+    chunks.forEach(function(ch, idx){
+      var res = parseNote(ch, state.rates);
+      addRow(res.row); names.push(res.row.customer);
+      res.warnings.forEach(function(w){ warns.push((chunks.length > 1 ? "[" + (idx+1) + "] " : "") + w); });
+    });
+    $("rawText").value = "";
+    fullRender(); saveNow();
+    var html = "✓ Added " + chunks.length + " group(s): " + esc(names.join(", ")) + ".";
+    if (warns.length) html += "<br>⚠ Please check:<ul>" + warns.map(function(w){ return "<li>" + esc(w) + "</li>"; }).join("") + "</ul>";
+    showMsg(warns.length ? "warn" : "ok", html);
+  }
+  function csvCell(v){ v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }
+  function download(name, mime, content){
+    var a = document.createElement("a"), url = URL.createObjectURL(new Blob([content], { type: mime }));
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+  function exportCsv(){
+    var idx = [0,1,2,3,4,5,6,7].filter(function(i){ return state.hidden.indexOf(i) < 0; });
+    var out = [idx.map(function(i){ return csvCell(COLS[i]); }).join(",")];
+    visibleRows().forEach(function(r){
+      var v = [r.date, r.customer, r.pax, r.sales, r.net, profitOf(r), r.boat, balOf(r)];
+      out.push(idx.map(function(i){ return csvCell(v[i]); }).join(","));
+    });
+    download("coral_island_summary_" + todayISO() + ".csv", "text/csv;charset=utf-8", "﻿" + out.join("\r\n"));
+  }
+  function wire(){
+    $("btnParse").addEventListener("click", onParse);
+    $("btnAdd").addEventListener("click", function(){ addRow({ date: todayISO() }); fullRender(); scheduleSave(); });
+    $("btnSample").addEventListener("click", function(){
+      if (state.rows.length && !confirm("Add the 10 sample groups to the existing data?")) return;
+      SAMPLE.forEach(function(s){ addRow({ date: s[0], customer: s[1], pax: s[2], sales: s[3], net: s[4], boat: s[5] }); });
+      fullRender(); scheduleSave();
+    });
+    $("btnPrint").addEventListener("click", function(){ window.print(); });
+    $("btnExternal").addEventListener("click", function(){ state.hidden = [4,5,6,7]; applyColumns(); scheduleSave(); });
+    $("btnAllCols").addEventListener("click", function(){ state.hidden = []; applyColumns(); scheduleSave(); });
+    $("monthFilter").addEventListener("change", function(e){ state.month = e.target.value; renderTable(); scheduleSave(); });
+    $("btnSort").addEventListener("click", function(){
+      state.rows.sort(function(a,b){ return (a.date || "9999").localeCompare(b.date || "9999") || a.id - b.id; });
+      renderTable(); scheduleSave();
+    });
+    $("btnCsv").addEventListener("click", exportCsv);
+    $("btnBackup").addEventListener("click", function(){ download("coral_island_backup_" + todayISO() + ".json", "application/json", JSON.stringify(state, null, 2)); });
+    $("btnRestore").addEventListener("click", function(){ $("fileRestore").click(); });
+    $("fileRestore").addEventListener("change", function(e){
+      var f = e.target.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function(){
+        try {
+          var obj = JSON.parse(rd.result);
+          if (!obj || !Array.isArray(obj.rows)) throw new Error("bad");
+          if (!confirm("Replace current data with " + obj.rows.length + " row(s) from this backup?")) return;
+          state = sanitize(obj); fullRender(); renderRates(); saveNow(); showMsg("ok", "✓ Backup restored.");
+        } catch (err) { showMsg("err", "That file is not a valid backup."); }
+      };
+      rd.readAsText(f); e.target.value = "";
+    });
+    $("btnClear").addEventListener("click", function(){
+      if (!state.rows.length) return;
+      if (!confirm("Delete ALL " + state.rows.length + " rows? Download a backup first if unsure.")) return;
+      state.rows = []; fullRender(); saveNow();
+    });
+  }
+
+  buildToggles(); wire(); load(); renderRates(); fullRender();
+  if (state.rows.length || localStorage.getItem(KEY)) setSaveState("Loaded saved data", "ok");
+  else setSaveState("No saved data yet", "warn");
+  window.__coral = { parseNote: parseNote, DEFAULT_RATES: DEFAULT_RATES, state: function(){ return state; } };
+})();
+</script>
+</body>
+</html>
