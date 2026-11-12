@@ -48,7 +48,7 @@ table input:focus{border-color:var(--brand);background:#fffdf6}
 .left{text-align:left!important}
 .empty{padding:1.5rem;color:var(--muted)}
 details summary{cursor:pointer;font-weight:600}
-.rates{margin-top:.75rem;max-width:620px}
+.rates{margin-top:.75rem;max-width:760px}
 .rates table{min-width:0}
 .print-meta{display:none}
 /* column hiding (class on table) */
@@ -130,7 +130,7 @@ Activity
     </div>
     <details style="margin-top:1rem">
       <summary>⚙️ Activity rate table (used by the note analyzer)</summary>
-      <div class="rates"><div class="table-responsive"><table id="rateTable"></table></div></div>
+      <div class="rates"><div class="table-responsive"><table id="rateTable"></table></div><div id="customBox" class="table-responsive" style="margin-top:.75rem"></div></div>
       <p class="status" style="color:var(--muted);margin-top:.4rem">Profit per unit = Sales − Net Cost. Edit if prices change; saved automatically.</p>
     </details>
   </div>
@@ -193,7 +193,7 @@ Activity
   var MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12,
     january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
 
-  var state = { rows: [], rates: clone(DEFAULT_RATES), hidden: [], month: "all", nextId: 1 };
+  var state = { rows: [], rates: clone(DEFAULT_RATES), custom: [], hidden: [], month: "all", nextId: 1 };
   var saveTimer = null;
 
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -215,7 +215,7 @@ Activity
   }
   function scheduleSave(){ setSaveState("Saving…", "warn"); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 400); }
   function sanitize(obj){
-    var s = { rows: [], rates: clone(DEFAULT_RATES), hidden: [], month: "all", nextId: 1 };
+    var s = { rows: [], rates: clone(DEFAULT_RATES), custom: [], hidden: [], month: "all", nextId: 1 };
     if (!obj || typeof obj !== "object") return s;
     (Array.isArray(obj.rows) ? obj.rows : []).forEach(function(r){
       if (!r || typeof r !== "object") return;
@@ -224,6 +224,12 @@ Activity
     });
     if (obj.rates && typeof obj.rates === "object") Object.keys(DEFAULT_RATES).forEach(function(k){
       var r = obj.rates[k]; if (r && isFinite(+r.sales) && isFinite(+r.net)) s.rates[k] = { label: DEFAULT_RATES[k].label, sales: +r.sales, net: +r.net };
+    });
+    if (Array.isArray(obj.custom)) obj.custom.forEach(function(c){
+      if (!c || typeof c !== "object") return;
+      var label = String(c.label || "").slice(0,60), keys = String(c.keys || "").slice(0,120);
+      if (!label || !keys.trim()) return;
+      s.custom.push({ label: label, keys: keys, sales: num(c.sales), net: num(c.net) });
     });
     if (Array.isArray(obj.hidden)) s.hidden = obj.hidden.filter(function(i){ return Number.isInteger(i) && i >= 0 && i < 8; });
     if (typeof obj.month === "string") s.month = obj.month;
@@ -248,7 +254,8 @@ Activity
     if (/s\/w|sea\s?walk/.test(lower)) return "sw";
     return null;
   }
-  function parseNote(text, rates){
+  function parseNote(text, rates, custom){
+    custom = custom || [];
     var warnings = [], lines = text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
     var isBoat = function(l){ return /boat|lunch/i.test(l) && /\d/.test(l); };
     var customer = "", pax = "";
@@ -267,13 +274,15 @@ Activity
     if (!pax) warnings.push("Pax not found.");
     var date = parseDate(lines.join("\n"));
     if (!date) { date = todayISO(); warnings.push("Date not found — used today's date."); }
-    var sales = 0, net = 0, boat = 0, acts = 0, boats = 0, extraCosts = [], declaredBal = null;
+    var sales = 0, net = 0, boat = 0, acts = 0, boats = 0, extraCosts = [], declaredBal = null, declaredAct = null, declaredCost = null, actProfit = 0;
     lines.forEach(function(l){
       var lower = l.toLowerCase();
       if (/^=/.test(l)) {
         /* summary line such as "=+600-1300=-700": remember the final figure for a cross-check, never add it */
         var fb = l.match(/^=[^=]*=\s*([+-]?\s*\d+)\s*$/);
-        if (fb) declaredBal = parseInt(fb[1].replace(/\s+/g,""),10);
+        if (fb) { declaredBal = parseInt(fb[1].replace(/\s+/g,""),10); return; }
+        var sub = l.match(/^=\s*([+-]?)\s*(\d+)\s*$/);
+        if (sub) { var sv = parseInt(sub[2],10); if (sub[1] === "-") declaredCost = -sv; else declaredAct = sv; }
         return;
       }
       if (isBoat(l)) {
@@ -283,8 +292,25 @@ Activity
         else { warnings.push('Boat/lunch line has no amount: "' + l + '"'); return; }
         boats++; return;
       }
-      var key = activityKey(lower);
-      if (!key) {
+      var key = activityKey(lower), rate = key ? rates[key] : null, cname = "";
+      if (!key) for (var ci = 0; ci < custom.length && !rate; ci++) {
+        var kws = String(custom[ci].keys).toLowerCase().split(",").map(function(k){ return k.trim(); }).filter(Boolean);
+        for (var ki = 0; ki < kws.length; ki++) {
+          var re = new RegExp("(^|[^a-z0-9])" + kws[ki].replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&") + "($|[^a-z0-9])");
+          if (re.test(lower)) { rate = custom[ci]; cname = custom[ci].label; break; }
+        }
+      }
+      if (!rate) {
+        /* activity unknown to the program but the note states its profit ("2*600 mini =+1200"): use the note's figure */
+        var dp0 = l.match(/^[^=]*\d+\s*[*x×]\s*\d+[^=]*=\s*\+\s*(\d+)\s*$/);
+        if (dp0) {
+          var p0 = parseInt(dp0[1],10);
+          sales += p0; actProfit += p0; acts++;
+          warnings.push('Activity not in the rate table — profit +' + fmt(p0) + ' taken from the note, but sales / net cost split is unknown: "' + l + '". Add it under "Activity rate table" to fix.');
+          return;
+        }
+      }
+      if (!rate) {
         /* any other line with a negative amount (e.g. "1*100 ch =-100") is a cost: add it to boat & lunch */
         var neg = l.match(/^[^=]*\d[^=]*=\s*-\s*(\d+)\s*$/);
         if (neg) { boat -= parseInt(neg[1],10); boats++; extraCosts.push(l); return; }
@@ -292,17 +318,21 @@ Activity
         return;
       }
       var q = (l.match(/(\d+)\s*[*x×]\s*\d+/) || [0,1])[1]; q = parseInt(q,10);
-      var rate = rates[key], decl = l.match(/=\s*\+\s*(\d+)/), inc = /\binc(l|luded)?\b/.test(lower);
+      var decl = l.match(/=\s*\+\s*(\d+)/), inc = /\binc(l|luded)?\b/.test(lower);
       acts++;
-      if (inc) { net += q * rate.net; return; }
+      if (inc) { net += q * rate.net; actProfit -= q * rate.net; return; }
       var s = q * rate.sales, n = q * rate.net;
       if (decl) {
         var dp = parseInt(decl[1],10), ep = s - n;
         if (dp !== ep) { warnings.push('"' + l + '": note says profit +' + fmt(dp) + ' but rate table gives +' + fmt(ep) + ' — kept the note\'s figure (check rates).'); n = s - dp; }
       }
-      sales += s; net += n;
+      sales += s; net += n; actProfit += s - n;
     });
     if (!acts && !boats) warnings.push("No activity or boat/lunch lines found.");
+    if (declaredAct !== null && declaredAct !== actProfit)
+      warnings.push("Activity subtotal in the note is +" + fmt(declaredAct) + " but the program calculated " + fmt(actProfit) + " — an activity line may be wrong or missing.");
+    if (declaredCost !== null && declaredCost !== boat)
+      warnings.push("Cost subtotal in the note is " + fmt(declaredCost) + " but the program calculated " + fmt(boat) + " — a boat/lunch/child line may be wrong or missing.");
     if (declaredBal !== null) {
       var calc = (sales - net) + boat;
       if (calc !== declaredBal) warnings.push("Note's final balance is " + fmt(declaredBal) + " but the program calculated " + fmt(calc) + " — please check the lines.");
@@ -417,6 +447,32 @@ Activity
       show(); tr.appendChild(pc); tb.appendChild(tr);
     });
     t.appendChild(tb);
+    renderCustom();
+  }
+  function renderCustom(){
+    var box = $("customBox"); box.innerHTML = "";
+    var tbl = mk("table"), thead = mk("thead"), hr = mk("tr");
+    ["Extra activity","Keywords in note (comma)","Sales","Net cost","Profit / unit",""].forEach(function(h){ hr.appendChild(mk("th","",h)); });
+    thead.style.background = "var(--brand)"; thead.style.color = "#fff"; thead.appendChild(hr); tbl.appendChild(thead);
+    var tb = mk("tbody");
+    state.custom.forEach(function(c, idx){
+      var tr = mk("tr"), pc = mk("td","num-pos");
+      var show = function(){ pc.textContent = fmt(c.sales - c.net); };
+      tr.appendChild(cell("", inputEl("text", c.label, function(e){ c.label = e.target.value; scheduleSave(); }, { left: true })));
+      tr.appendChild(cell("", inputEl("text", c.keys, function(e){ c.keys = e.target.value; scheduleSave(); }, { placeholder: "e.g. mini, mini boat" })));
+      tr.appendChild(cell("", inputEl("number", c.sales, function(e){ c.sales = num(e.target.value); show(); scheduleSave(); })));
+      tr.appendChild(cell("", inputEl("number", c.net, function(e){ c.net = num(e.target.value); show(); scheduleSave(); })));
+      show(); tr.appendChild(pc);
+      var del = mk("button","btn btn-danger btn-sm","✕");
+      del.addEventListener("click", function(){ state.custom.splice(idx,1); renderCustom(); scheduleSave(); });
+      var tdd = mk("td"); tdd.appendChild(del); tr.appendChild(tdd);
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb); box.appendChild(tbl);
+    var add = mk("button","btn btn-outline btn-sm","➕ Add activity");
+    add.style.marginTop = ".5rem";
+    add.addEventListener("click", function(){ state.custom.push({ label: "New activity", keys: "", sales: 0, net: 0 }); renderCustom(); scheduleSave(); });
+    box.appendChild(add);
   }
   function fullRender(){ refreshMonths(); renderTable(); applyColumns(); }
 
@@ -433,7 +489,7 @@ Activity
     var chunks = text.split(/^\s*(?:-{3,}|={3,})\s*$/m).map(function(c){ return c.trim(); }).filter(Boolean);
     var names = [], warns = [];
     chunks.forEach(function(ch, idx){
-      var res = parseNote(ch, state.rates);
+      var res = parseNote(ch, state.rates, state.custom);
       addRow(res.row); names.push(res.row.customer);
       res.warnings.forEach(function(w){ warns.push((chunks.length > 1 ? "[" + (idx+1) + "] " : "") + w); });
     });
